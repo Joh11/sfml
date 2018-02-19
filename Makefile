@@ -1,11 +1,11 @@
 LIBS = -lsfml-graphics -lsfml-window -lsfml-system
 CXX := g++
 
-CXXFLAGS = -std=c++11
+CXXFLAGS = -std=c++14 -g
 
 EXEC_NAME = app
 
-OBJ = main.o
+OBJ = main.o lisp.o
 OBJDIR = build/
 
 OBJ_WITH_DIR = $(addprefix $(OBJDIR), $(OBJ))
