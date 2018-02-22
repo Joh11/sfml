@@ -8,65 +8,78 @@
 #include <map>
 #include <utility>
 #include <list>
+#include <functional>
 
 namespace utils
 {
-        template <typename T>
-        std::unique_ptr<T> copy_unique(const std::unique_ptr<T>& source)
-        {
-                return (bool)source ? std::make_unique<T>(*source) : nullptr;
-        }
+        bool contains(std::string const& s, char c);
 }
 
 namespace lisp
 {
         using Num = double;
-        template <typename T> using List = std::list<T>;
 
-        struct Atom
+        enum CellType
         {
-                enum {NUM, SYM, STR} type;
+                Symbol, Number, List, Proc, Lambda
+        };
 
+        struct Env;
+
+        struct Cell
+        {
+                using ProcType = std::function<Cell(std::vector<Cell>)>;
+
+                CellType type;
                 Num num;
-                std::string sym;
-                std::string str;
+                std::string val;
+                std::vector<Cell> list;
+                ProcType proc;
+                Env *env;
 
-                static Atom mkNum(Num const& num) {return {NUM, num, "", ""}; }
-                static Atom mkSym(std::string const& sym) {return {SYM, 0, sym, ""}; }
-                static Atom mkStr(std::string const& str) {return {STR, 0, "", str}; }
+                Cell(CellType type = Symbol) : type{type}, env{nullptr} {}
+                Cell(CellType type, std::string const& val) : type{type}, val{val}, env{nullptr} {}
+                Cell(ProcType proc) : type{Proc}, proc{proc}, env{nullptr} {}
         };
 
-        std::ostream & operator<<(std::ostream &, Atom const&);
+        std::ostream &operator<<(std::ostream & o, Cell const& c);
 
-        const Atom EMPTY_ATOM = {Atom::SYM, 0, "", ""};
-
-        struct Sexpr
+        struct Env
         {
-                bool isAtom;
+                using Map = std::map<std::string, Cell>;
 
-                Atom atom;
-                std::unique_ptr<Sexpr> car, cdr;
+                Env(Env * outer = nullptr) : _outer{outer} {}
+                Env(std::vector<Cell> const& params, std::vector<Cell> const& args, Env * outer = nullptr);
 
-                // Copy constructor with deep copy
-                Sexpr(Sexpr const&);
-                Sexpr(bool, Atom const&, std::unique_ptr<Sexpr> const&, std::unique_ptr<Sexpr> const&);
-                Sexpr(bool, Atom const&, Sexpr const& car, Sexpr const& cdr);
-
-                static Sexpr mkAtom(Atom const& atom) {return {true, atom, {nullptr}, {nullptr}}; }
-                static Sexpr mkCons(Sexpr const& car, Sexpr const& cdr) {return {false, EMPTY_ATOM, car, cdr}; }
+                Cell const& get(std::string const& var);
+                Cell& operator[](std::string const& var);
+        private:
+                Env *_outer;
+                Map _map;
         };
 
-        std::ostream & operator<<(std::ostream &, Sexpr const&);
+        // Parsing stuff
+        std::list<std::string> tokenize(std::string const& s);
+        std::vector<Cell> parse(std::string const& s);
+        Cell parseFrom(std::list<std::string> &tokens);
+        Cell parseAtom(std::string const& s);
 
-        const Sexpr NIL = {true, {Atom::NUM, 0, "NIL", ""}, {nullptr}, {nullptr}};
+        // Evaluation stuff
+        class Interpreter
+        {
+        public:
+                Interpreter();
 
-        inline bool contains(std::string const& s, char c) {return s.find(c) != s.npos; }
+                Cell eval(Cell const& c);
+                Cell eval(std::string const& s);
 
-        List<std::string> tokenize(std::string const& s);
+                void replOnce();
+                void repl();
+        private:
+                Cell eval(Cell const& c, Env & env);
 
-        List<Sexpr> parse(std::string const& s);
-        Sexpr parseOne(List<std::string> & tokens);
-        Sexpr mkList(List<Sexpr>);
+                Env _env; // The environment for global variables and functions
+        };
 }
 
 #endif

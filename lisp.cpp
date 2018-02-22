@@ -3,147 +3,243 @@
 #include <cctype>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+
+namespace utils
+{
+        bool contains(std::string const& s, char c)
+        {
+                return s.find(c) != s.npos;
+        }
+}
 
 namespace lisp
 {
-    Sexpr::Sexpr(Sexpr const& other)
-    	: isAtom{other.isAtom}
-    	, atom{other.atom}
-    	, car{utils::copy_unique(car)}
-	, cdr{utils::copy_unique(cdr)}
-    {}
+        bool displayMExp = true; // If true, show [a ; b ; c] instead of (a b c) for debugging purpose
 
-    Sexpr::Sexpr(bool isAtom, Atom const& atom, std::unique_ptr<Sexpr> const& car, std::unique_ptr<Sexpr> const& cdr)
-    	: isAtom{isAtom}, atom{atom}, car{utils::copy_unique(car)}, cdr{utils::copy_unique(cdr)}
-    {}
+        std::ostream &operator<<(std::ostream & o, Cell const& c)
+        {
+                if(displayMExp)
+                {
+                        switch(c.type)
+                        {
+                        case Symbol:
+                                return o << c.val;
+                        case Number:
+                                return o << c.num;
+                        case List:
+                                if (c.list.empty())
+                                        return o << "[]";
 
-    Sexpr::Sexpr(bool isAtom, Atom const& atom, Sexpr const& car, Sexpr const& cdr)
-	: isAtom{isAtom}
-	, atom{atom}
-	, car{std::make_unique<Sexpr>(car)}
-	, cdr{std::make_unique<Sexpr>(cdr)}
-    {}
+                                o << "[ ";
+                                for(auto it =  c.list.begin() ; it != c.list.end() - 1 ; ++it)
+                                {
+                                        o << *it << " ; ";
+                                }
+                                return o << c.list[c.list.size() - 1] << " ]";
+                        case Proc:
+                                return o << "<Proc>";
+                        case Lambda:
+                                return o << "<Lambda>";
+                        }
+                }
 
-    std::ostream & operator<<(std::ostream & o, Atom const& a)
-    {
-	switch(a.type)
-	{
-	case Atom::NUM:
-	    return o << a.num;
-	case Atom::SYM:
-	    return o << a.sym;
-	case Atom::STR:
-	    return o << "\"" << a.str << "\"";
-	}
-    }
+                return o;
+        }
 
-    // --------------------------------------------------
+        const Cell trueSym{Symbol, "#t"};
+        const Cell falseSym{Symbol, "#f"};
+        const Cell nil{Symbol, "nil"};
 
-    std::ostream & operator<<(std::ostream &o, Sexpr const&s)
-    {
-	o << "test" << std::endl;
-	if(s.isAtom)
-	    return o << s.atom;
-	if (!s.car || !s.cdr)
-	    return o << "INVALD";
-	return o << "(" << *(s.car) << " . " << *(s.cdr) << ")";
-    }
-    
-    // --------------------------------------------------
-    
-    List<std::string> tokenize(std::string const& s)
-    {
-	List<std::string> tokens;
-	std::string token;
-	for(auto c : s)
-	{
-	    if(contains("().", c))
-	    {
-		tokens.push_back(token);
-		tokens.push_back({c});
-		token = "";
-	    }
-	    else if(isspace(c))
-	    {
-		tokens.push_back(token);
-		token = "";
-	    }
-	    else
-	    {
-		token += c;
-	    }
-	}
+        Env::Env(std::vector<Cell> const& params, std::vector<Cell> const& args, Env * outer)
+                : _outer{outer}
+        {
+                for(auto it1{params.begin()}, it2{args.begin()} ; it1 != params.end() && it2 != args.end() ; ++it1, ++it2)
+                {
+                        _map[it1->val] = *it2;
+                }
+        }
 
-	if(!token.empty())
-	    tokens.push_back(token);
+        Cell const& Env::get(std::string const& var)
+        {
+                try
+                {
+                        return _map.at(var);
+                } catch(std::out_of_range const& e)
+                {
+                        if(_outer != nullptr)
+                        {
+                                return (*_outer)[var];
+                        }
 
-	// remove all empty tokens
-	tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
-	
-	return tokens;
-    }
-    
-    List<Sexpr> parse(std::string const& s)
-    {
-	auto tokens = tokenize(s);
-	List<Sexpr> sexprs;
-	
-	while(!tokens.empty())
-	{
-	    for(auto const& s : tokens)
-		std::cout << s << "/";
-	    std::cout << std::endl;
-	    sexprs.push_back(parseOne(tokens));
-	}
+                        throw;
+                }
+        }
 
-	return sexprs;
-    }
+        Cell & Env::operator[](std::string const& var)
+        {
+                return _map[var];
+        }
 
-    Sexpr parseOne(List<std::string> & tokens)
-    {
-	if(tokens.front() == "(")
-	{
-	    tokens.pop_front();
-	    if (tokens.front() == ")") // Then it is the empty list
-	    {
-		tokens.pop_front();
-		return NIL;
-	    }
-	    
-	    List<Sexpr> list;
-	    list.push_back(parseOne(tokens));
-	    if(tokens.front() == ".") // if dotted pair
-	    {
-		tokens.pop_front();
-		list.push_back(parseOne(tokens));
+        std::list<std::string> tokenize(std::string const& s)
+        {
+                std::list<std::string> tokens;
+                std::string token;
 
-		if(tokens.front() != ")")
-		    throw std::runtime_error{"Expected a ')' to close the dotted pair"};
+                for(auto c : s)
+                {
+                        if(utils::contains("()", c))
+                        {
+                                tokens.push_back(token);
+                                tokens.push_back({c});
+                                token = "";
+                        }
+                        else if(isspace(c))
+                        {
+                                tokens.push_back(token);
+                                token = "";
+                        }
+                        else
+                        {
+                                token += c;
+                        }
+                }
 
-		// Remove the last ")"
-		tokens.pop_front();
-		return Sexpr::mkCons(list.front(), list.back());
-	    }
+                if(!token.empty())
+                        tokens.push_back(token);
 
-	    // Else consume all sexprs until a ')' is seen
-	    while(tokens.front() != ")")
-		list.push_back(parseOne(tokens));
+                tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
 
-	    return mkList(list);
-	}
+                return tokens;
+        }
 
-	if(tokens.front() == "." || tokens.front() == ")")
-	    throw std::runtime_error{"Expected a '(' or atom"};
+        std::vector<Cell> parse(std::string const& s)
+        {
+                auto tokens = tokenize(s);
+                std::vector<Cell> cells;
+                while(!tokens.empty())
+                {
+                        cells.push_back(parseFrom(tokens));
+                }
 
-	auto token = tokens.front();
-	tokens.pop_front();
-	return Sexpr::mkAtom(Atom::mkSym(token));
-    }
+                return cells;
+        }
 
-    Sexpr mkList(List<Sexpr> list)
-    {
-	auto car = list.front();
-	list.pop_front();
-	return Sexpr::mkCons(car, mkList(list));
-    }
+        Cell parseFrom(std::list<std::string> &tokens)
+        {
+                const std::string token{tokens.front()};
+                tokens.pop_front();
+
+                if(token == "(")
+                {
+                        Cell c{List};
+                        while(tokens.front() != ")")
+                        {
+                                c.list.push_back(parseFrom(tokens));
+                        }
+                        tokens.pop_front(); // Remove the closing parenthesis
+
+                        return c;
+                }
+                else
+                {
+                        return parseAtom(token);
+                }
+        }
+
+        Cell parseAtom(std::string const& s)
+        {
+                Cell c;
+                std::stringstream ss{s};
+                Num num;
+                std::string val;
+
+                if(ss >> num)
+                {
+                        c.type = Number;
+                        c.num = num;
+                        return c;
+                }
+
+                c.val = s;
+                return c;
+        }
+
+        // Evaluation stuff
+        Interpreter::Interpreter()
+        {
+                // We just set a few primitives
+                _env["nil"] = nil;
+                _env["#t"] = trueSym;
+                _env["#f"] = falseSym;
+        }
+
+        Cell Interpreter::eval(Cell const& c)
+        {
+                return eval(c, _env);
+        }
+
+        Cell Interpreter::eval(std::string const& s)
+        {
+                Cell c;
+                auto cs{parse(s)};
+
+                std::for_each(cs.begin(), cs.end(), [this](Cell & c){c = eval(c); });
+
+                return cs[cs.size() - 1];
+        }
+
+        void Interpreter::replOnce()
+        {
+                using namespace std;
+                string input;
+                cout << "? ";
+                getline(cin, input);
+                cout << "result " << eval(input) << endl;
+        }
+
+        void Interpreter::repl()
+        {
+                while(true) replOnce();
+        }
+
+        Cell Interpreter::eval(Cell const& c, Env & env)
+        {
+                switch(c.type)
+                {
+                case Symbol:
+                        return env.get(c.val);
+                case Number:
+                        return c;
+                case List:
+                {
+                        // If it is the empty list return nil
+                        if (c.list.empty())
+                                return nil;
+
+                        std::vector<Cell> evaluatedList{c.list};
+                        // We first evaluate all the components
+                        std::for_each(evaluatedList.begin(), evaluatedList.end(), [&env, this](Cell & c)
+                                      {
+                                              c = eval(c, env);
+                                      });
+
+                        std::vector<Cell> args{evaluatedList.begin() + 1, evaluatedList.end()};
+                        // Then we have to make sure that the first one is either a Proc or a Lambda
+                        if(evaluatedList[0].type == Proc)
+                        {
+                                return (evaluatedList[0].proc)(args);
+                        }
+                        if(evaluatedList[0].type == Lambda)
+                        {
+                                // TODO complete this
+                        }
+
+                        throw std::runtime_error{"the first element of the list is not a function"};
+                }
+                case Proc:
+                case Lambda:
+                        throw std::runtime_error{"A Process or a Lambda is not evaluable"};
+                }
+        }
 }

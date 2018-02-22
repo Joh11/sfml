@@ -16,21 +16,8 @@ int main()
     std::cout << "SFML version : ";
     std::cout << SFML_VERSION_MAJOR << "." << SFML_VERSION_MINOR << "." << SFML_VERSION_PATCH << std::endl;
 
-    std::string str;
-    std::getline(std::cin, str);
-    
-    for(auto const& s : lisp::tokenize(str))
-    {
-    	std::cout << "-" << s;
-    }
-
-    std::cout << "TEST" << std::endl;
-
-    auto tab = lisp::parse(str);
-    for(auto const& s : tab)
-    {
-    	std::cout << s << std::endl;
-    }
+    lisp::Interpreter i;
+    i.repl();
 
     // {
     // 	using namespace lisp;
