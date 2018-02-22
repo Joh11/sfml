@@ -12,16 +12,26 @@
 
 namespace utils
 {
+        // Returns true if the string contains the character
         bool contains(std::string const& s, char c);
 }
 
 namespace lisp
 {
-        using Num = double;
+        using Num = double; // For now we support only one numeric type
 
         enum CellType
         {
-                Symbol, Number, List, Proc, Lambda
+                Symbol 
+                , Number // Of type Num
+
+                , List
+
+                , Proc // Builtin function
+                , SpeForm // Builtin special form (the arguments are not evaluated)
+
+                , Lambda // User defined function
+                , Macro // User defined macro
         };
 
         struct Env;
@@ -32,10 +42,10 @@ namespace lisp
 
                 CellType type;
                 Num num;
-                std::string val;
-                std::vector<Cell> list;
-                ProcType proc;
-                Env *env;
+                std::string val; // For the symbol, and later the string (also the name of processes and special forms)
+                std::vector<Cell> list; // For the lists, the lambdas and the macros
+                ProcType proc; // For the processes and special forms
+                Env *env; // Closure for lambdas and macros
 
                 Cell(CellType type = Symbol) : type{type}, env{nullptr} {}
                 Cell(CellType type, std::string const& val) : type{type}, val{val}, env{nullptr} {}

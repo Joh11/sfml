@@ -27,6 +27,7 @@ namespace lisp
                                 return o << c.val;
                         case Number:
                                 return o << c.num;
+
                         case List:
                                 if (c.list.empty())
                                         return o << "[]";
@@ -37,10 +38,15 @@ namespace lisp
                                         o << *it << " ; ";
                                 }
                                 return o << c.list[c.list.size() - 1] << " ]";
+
                         case Proc:
-                                return o << "<Proc>";
+                                return o << "<proc: " << c.val << " >";
+                        case SpeForm:
+                                return o << "<speform: " << c.val << " >";
                         case Lambda:
-                                return o << "<Lambda>";
+                                return o << "<lambda>";
+                        case Macro:
+                                return o << "<macro>";
                         }
                 }
 
@@ -217,29 +223,49 @@ namespace lisp
                         if (c.list.empty())
                                 return nil;
 
-                        std::vector<Cell> evaluatedList{c.list};
-                        // We first evaluate all the components
-                        std::for_each(evaluatedList.begin(), evaluatedList.end(), [&env, this](Cell & c)
-                                      {
-                                              c = eval(c, env);
-                                      });
+                        // We evaluate the first element
+                        auto f = eval(c.list[0], env);
 
-                        std::vector<Cell> args{evaluatedList.begin() + 1, evaluatedList.end()};
-                        // Then we have to make sure that the first one is either a Proc or a Lambda
-                        if(evaluatedList[0].type == Proc)
+                        if(f.type == Symbol || f.type == Number || f.type == List)
+                                throw std::runtime_error{"The first element is not of a function type"};
+
+                        std::vector<Cell> args{c.list.begin() + 1, c.list.end()};
+                        // If Proc or Lambda, evaluate the arguments
+                        if(f.type == Proc || f.type == Lambda)
                         {
-                                return (evaluatedList[0].proc)(args);
-                        }
-                        if(evaluatedList[0].type == Lambda)
-                        {
-                                // TODO complete this
+                                std::for_each(args.begin(), args.end(), [&env, this](Cell & c)
+                                              {
+                                                      c = eval(c, env);
+                                              });
                         }
 
-                        throw std::runtime_error{"the first element of the list is not a function"};
+                        // The evaluation methods are different
+                        if(f.type == Proc || f.type == SpeForm)
+                                return (f.proc)(args);
+
+                        auto const& params{f.list[1].list};
+                        std::vector<Cell> const& body{f.list.begin() + 1, f.list.end()};
+
+                        // Make sure there is exactly the same number of arguments given and received
+                        if(params.size() != args.size())
+                                throw std::runtime_error{"Number of arguments mismatch"};
+
+                        // Now evaluate the body of the lambda / macro
+                        // with a new environment given by the arguments
+                        Env argEnv{params, args, f.env};
+
+                        for(auto it = body.begin() ; it != body.end() - 1 ; ++it)
+                        {
+                                eval(*it, argEnv);
+                        }
+
+                        return eval(body[body.size() - 1]); // Return the value of the last sexpr in the body
                 }
                 case Proc:
+                case SpeForm:
                 case Lambda:
-                        throw std::runtime_error{"A Process or a Lambda is not evaluable"};
+                case Macro:
+                        throw std::runtime_error{"A function type is not evaluable"};
                 }
         }
 }

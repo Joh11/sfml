@@ -5,11 +5,11 @@
 - quote syntactic sugar
 - more numeric types
 - arrays
-- lambda
+- lambda (NOT TESTED)
 - better error messages
 - mismatching parenthesis 
 - primitives (cons, car, cdr, ...)
-- macros
+- macros (NOT TESTED)
 - reader macro
 - load from file
 - object system ?
