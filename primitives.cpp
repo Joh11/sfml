@@ -33,7 +33,7 @@ Cell cdr(std::vector<Cell> const& xs)
         return Cell::mkList(std::vector<Cell>{x.list.begin() + 1, x.list.end()});
 }
 
-Cell eqQestionMark(std::vector<Cell> const& xs)
+Cell eqQuestionMark(std::vector<Cell> const& xs)
 {
         auto const& x = xs[0];
         auto const& y = xs[1];
@@ -43,7 +43,7 @@ Cell eqQestionMark(std::vector<Cell> const& xs)
 
 Cell atomQuestionMark(std::vector<Cell> const& xs)
 {
-        return (xs[0].type != List) ? trueSym : falseSym;
+        return (xs[0].type != List) ? trueSym : xs[0].list.empty() ? trueSym : falseSym;
 }
 
 Cell quote(std::vector<Cell> const& xs)

@@ -6,8 +6,8 @@
 lisp::Cell cons(std::vector<lisp::Cell> const& xs);
 lisp::Cell car(std::vector<lisp::Cell> const& xs);
 lisp::Cell cdr(std::vector<lisp::Cell> const& xs);
-lisp::Cell eqQestionMark(std::vector<lisp::Cell> const& xs);
-// lisp::Cell atomQuestionMark(std::vector<lisp::Cell> const& xs);
+lisp::Cell eqQuestionMark(std::vector<lisp::Cell> const& xs);
+lisp::Cell atomQuestionMark(std::vector<lisp::Cell> const& xs);
 
 lisp::Cell quote(std::vector<lisp::Cell> const& xs);
 // lisp::Cell cond(std::vector<lisp::Cell> const& xs);

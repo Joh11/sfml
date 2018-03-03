@@ -201,7 +201,8 @@ namespace lisp
                 _env["cons"] = {{cons}};
                 _env["car"] = {{car}};
                 _env["cdr"] = {{cdr}};
-                _env["eq?"] = {{eqQestionMark}};
+                _env["eq?"] = {{eqQuestionMark}};
+                _env["atom?"] = {{atomQuestionMark}};
 
                 _env["quote"] = {{quote}, SpeForm};
                 _env["cond"] = {SpeForm, "cond"};
