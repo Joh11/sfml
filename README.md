@@ -22,7 +22,7 @@
 - [x] car
 - [x] cdr
 - [x] eq?
-- [ ] atom?
+- [x] atom?
 
 ### Builtin special forms
 - [x] quote
