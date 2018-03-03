@@ -18,14 +18,14 @@
 ## Smallest set of primitive
 
 ### Builtin functions
-- cons
-- car
-- cdr
-- eq?
-- atom?
+- [x] cons
+- [x] car
+- [x] cdr
+- [x] eq?
+- [ ] atom?
 
 ### Builtin special forms
-- quote
-- cond
-- lambda
-- label
+- [x] quote
+- [x] cond
+- [ ] lambda
+- [x] label
