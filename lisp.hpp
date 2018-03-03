@@ -1,6 +1,5 @@
 #ifndef LISP_HPP
 #define LISP_HPP
-
 #include <string>
 #include <ostream>
 #include <memory>
@@ -22,7 +21,7 @@ namespace lisp
 
         enum CellType
         {
-                Symbol 
+                Symbol
                 , Number // Of type Num
 
                 , List
@@ -38,7 +37,7 @@ namespace lisp
 
         struct Cell
         {
-                using ProcType = std::function<Cell(std::vector<Cell>)>;
+                using ProcType = std::function<Cell(std::vector<Cell> const&)>;
 
                 CellType type;
                 Num num;
@@ -47,12 +46,25 @@ namespace lisp
                 ProcType proc; // For the processes and special forms
                 Env *env; // Closure for lambdas and macros
 
+                Cell(CellType type, Num num, std::string const& s, std::vector<Cell> const& xs, ProcType const& proc, Env *env)
+                        : type{type}, num{num}, val{s}, list{xs}, proc{proc}, env{env} {}
+
                 Cell(CellType type = Symbol) : type{type}, env{nullptr} {}
                 Cell(CellType type, std::string const& val) : type{type}, val{val}, env{nullptr} {}
-                Cell(ProcType proc) : type{Proc}, proc{proc}, env{nullptr} {}
+                Cell(ProcType proc, CellType type = Proc) : type{type}, proc{proc}, env{nullptr} {}
+
+                static Cell mkList(std::vector<Cell> const& xs) {return Cell{List, 0, "", xs, {}, nullptr};}
+
+                bool operator==(Cell const& c) const;
+                bool operator!=(Cell const& c) const {return !(*this == c);}
         };
 
         std::ostream &operator<<(std::ostream & o, Cell const& c);
+
+        extern const Cell nil;
+        extern const Cell trueSym;
+        extern const Cell falseSym;
+
 
         struct Env
         {
@@ -87,6 +99,11 @@ namespace lisp
                 void repl();
         private:
                 Cell eval(Cell const& c, Env & env);
+
+                Cell evalLabel(std::vector<Cell> const& args, Env & env);
+                Cell evalCond(std::vector<Cell> const& args, Env & env);
+
+                static bool toBool(Cell const& c);
 
                 Env _env; // The environment for global variables and functions
         };

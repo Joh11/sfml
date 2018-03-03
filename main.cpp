@@ -24,7 +24,7 @@ int main()
     // 	auto sexpr = Sexpr::mkCons(Sexpr::mkAtom(Atom::mkStr("test")), Sexpr::mkAtom(Atom::mkSym("test")));
     // 	std::cout << sexpr;
     // }
-    
+
     RenderWindow win(getBestVideoMode(), "SFML Works", Style::Fullscreen);
 
     while (win.isOpen())
@@ -41,7 +41,7 @@ int main()
 
 	win.display();
     }
-    
+
     return EXIT_SUCCESS;
 }
 

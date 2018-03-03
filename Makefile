@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++14 -g
 
 EXEC_NAME = app
 
-OBJ = main.o lisp.o
+OBJ = main.o lisp.o primitives.o
 OBJDIR = build/
 
 OBJ_WITH_DIR = $(addprefix $(OBJDIR), $(OBJ))

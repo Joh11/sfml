@@ -1,9 +1,10 @@
-#include "lisp.hpp"
-
 #include <cctype>
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+
+#include "lisp.hpp"
+#include "primitives.hpp"
 
 namespace utils
 {
@@ -16,6 +17,24 @@ namespace utils
 namespace lisp
 {
         bool displayMExp = true; // If true, show [a ; b ; c] instead of (a b c) for debugging purpose
+
+        bool Cell::operator==(Cell const& c) const
+        {
+                if(type != c.type)
+                        return false;
+
+                switch(type)
+                {
+                case Symbol:
+                        return val == c.val;
+                case Number:
+                        return num == c.num;
+                case List:
+                        return list == c.list;
+                default:
+                        throw std::runtime_error{"You cannot compare functions"};
+                }
+        }
 
         std::ostream &operator<<(std::ostream & o, Cell const& c)
         {
@@ -55,7 +74,7 @@ namespace lisp
 
         const Cell trueSym{Symbol, "#t"};
         const Cell falseSym{Symbol, "#f"};
-        const Cell nil{Symbol, "nil"};
+        const Cell nil{Cell::mkList({})};
 
         Env::Env(std::vector<Cell> const& params, std::vector<Cell> const& args, Env * outer)
                 : _outer{outer}
@@ -178,6 +197,16 @@ namespace lisp
                 _env["nil"] = nil;
                 _env["#t"] = trueSym;
                 _env["#f"] = falseSym;
+
+                _env["cons"] = {{cons}};
+                _env["car"] = {{car}};
+                _env["cdr"] = {{cdr}};
+                _env["eq?"] = {{eqQestionMark}};
+
+                _env["quote"] = {{quote}, SpeForm};
+                _env["cond"] = {SpeForm, "cond"};
+                _env["label"] = {SpeForm, "label"};
+
         }
 
         Cell Interpreter::eval(Cell const& c)
@@ -241,7 +270,22 @@ namespace lisp
 
                         // The evaluation methods are different
                         if(f.type == Proc || f.type == SpeForm)
+                        {
+                                if(f.type == SpeForm)
+                                {
+                                        if(f.val == "cond")
+                                        {
+                                                // Do the cond stuff
+                                                return evalCond(args, env);
+                                        }
+                                        else if(f.val == "label")
+                                        {
+                                                return evalLabel(args, env);
+                                        }
+                                }
+
                                 return (f.proc)(args);
+                        }
 
                         auto const& params{f.list[1].list};
                         std::vector<Cell> const& body{f.list.begin() + 1, f.list.end()};
@@ -267,5 +311,65 @@ namespace lisp
                 case Macro:
                         throw std::runtime_error{"A function type is not evaluable"};
                 }
+        }
+
+        Cell Interpreter::evalCond(std::vector<Cell> const& args, Env & env)
+        {
+                // Evaluate all the first components of the lists
+                // If one is true, then return the evaluation of the associated body
+                for(auto const& c : args)
+                {
+                        if(c.type != List || c.list.size() != 2)
+                                throw std::runtime_error{"This is not a 2 elements list ! "};
+
+                        if(toBool(eval(c.list[0], env)))
+                                return eval(c.list[1], env);
+                }
+
+                // Return nil otherwise
+                return nil;
+        }
+
+        Cell Interpreter::evalLabel(std::vector<Cell> const& args, Env & env)
+        {
+                // We create a new environment inherited from the previous one
+                auto newEnv{env};
+
+                // We should have at least two args : one for variables, and one for the body
+                if(args.size() < 2)
+                        throw std::runtime_error{"Not enough arguments for label special form"};
+
+                auto const& vars = args[0];
+                if(vars.type != List)
+                        throw std::runtime_error{"The first argument of label should be a list"};
+
+                // We fill it with the created variables
+                for(auto const& v : vars.list)
+                {
+                        if(v.type != List || v.list.size() != 2)
+                                throw std::runtime_error{"The first argument of label should contain 2 elements lists"};
+                        if(v.list[0].type != Symbol)
+                                throw std::runtime_error{"In label : should be a symbol"};
+
+                        auto const& var{v.list[0].val};
+                        auto const& value{v.list[1]};
+
+                        newEnv[var] = eval(value, env);
+                }
+
+                // We now evaluate the body with the new environment
+                std::vector<Cell> body{args.begin() + 1, args.end()};
+                for_each(body.begin(), body.end(), [this, &newEnv](Cell & c) {c = eval(c, newEnv);});
+
+
+                // Return the last value as always
+                return body[body.size() - 1];
+        }
+
+
+        bool Interpreter::toBool(Cell const& c)
+        {
+                // Only false and nil are false
+                return (c != falseSym) && (c != nil);
         }
 }
