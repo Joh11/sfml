@@ -5,13 +5,12 @@
 - quote syntactic sugar
 - more numeric types
 - arrays
-- lambda (NOT TESTED)
+- lambda (TODO test closures)
 - better error messages
 - mismatching parenthesis 
-- primitives (cons, car, cdr, ...)
 - macros (NOT TESTED)
 - reader macro
-- load from file
+- load from file (done really badly)
 - object system ?
 - quasi quote / comma syntactic sugar
 
@@ -27,5 +26,5 @@
 ### Builtin special forms
 - [x] quote
 - [x] cond
-- [ ] lambda
+- [x] lambda
 - [x] label

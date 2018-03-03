@@ -94,10 +94,10 @@ namespace lisp
                 {
                         if(_outer != nullptr)
                         {
-                                return (*_outer)[var];
+                                return _outer->get(var);
                         }
 
-                        throw;
+                        throw std::runtime_error{"Tried to find the value bound to the following : " + var + " but found none. "};
                 }
         }
 
@@ -207,6 +207,8 @@ namespace lisp
                 _env["quote"] = {{quote}, SpeForm};
                 _env["cond"] = {SpeForm, "cond"};
                 _env["label"] = {SpeForm, "label"};
+                _env["lambda"] = {SpeForm, "lambda"};
+
 
         }
 
@@ -283,13 +285,22 @@ namespace lisp
                                         {
                                                 return evalLabel(args, env);
                                         }
+                                        else if(f.val == "lambda")
+                                        {
+                                                // The code is short enough we put it here
+                                                auto cpy{c};
+                                                cpy.type = Lambda;
+                                                cpy.list[0] = f;
+                                                cpy.env = &env;
+                                                return cpy;
+                                        }
                                 }
 
                                 return (f.proc)(args);
                         }
 
                         auto const& params{f.list[1].list};
-                        std::vector<Cell> const& body{f.list.begin() + 1, f.list.end()};
+                        std::vector<Cell> const& body{f.list.begin() + 2, f.list.end()};
 
                         // Make sure there is exactly the same number of arguments given and received
                         if(params.size() != args.size())
@@ -304,7 +315,7 @@ namespace lisp
                                 eval(*it, argEnv);
                         }
 
-                        return eval(body[body.size() - 1]); // Return the value of the last sexpr in the body
+                        return eval(body[body.size() - 1], argEnv); // Return the value of the last sexpr in the body
                 }
                 case Proc:
                 case SpeForm:

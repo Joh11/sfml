@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <fstream>
 
 #include <SFML/Graphics.hpp>
 
@@ -11,51 +12,64 @@ using namespace sf;
 
 VideoMode getBestVideoMode();
 
-int main()
+int main(int argc, char *argv[])
 {
-    std::cout << "SFML version : ";
-    std::cout << SFML_VERSION_MAJOR << "." << SFML_VERSION_MINOR << "." << SFML_VERSION_PATCH << std::endl;
+        std::cout << "SFML version : ";
+        std::cout << SFML_VERSION_MAJOR << "." << SFML_VERSION_MINOR << "." << SFML_VERSION_PATCH << std::endl;
 
-    lisp::Interpreter i;
-    i.repl();
+        lisp::Interpreter i;
 
-    // {
-    // 	using namespace lisp;
-    // 	auto sexpr = Sexpr::mkCons(Sexpr::mkAtom(Atom::mkStr("test")), Sexpr::mkAtom(Atom::mkSym("test")));
-    // 	std::cout << sexpr;
-    // }
+        if(argc == 2)
+        {
+                // Load the given file
+                std::ifstream file{argv[1]};
+                std::string fileStr, lineStr;
 
-    RenderWindow win(getBestVideoMode(), "SFML Works", Style::Fullscreen);
+                while(std::getline(file, lineStr))
+                        fileStr += lineStr;
 
-    while (win.isOpen())
-    {
-	Event e;
+                std::cout << "FILE LOADED : " << i.eval(fileStr) << std::endl;
+        }
 
-	while (win.pollEvent(e))
-	{
-	    if (e.type == Event::Closed)
-		win.close();
-	}
+        i.repl();
 
-	win.clear();
+        // {
+        // 	using namespace lisp;
+        // 	auto sexpr = Sexpr::mkCons(Sexpr::mkAtom(Atom::mkStr("test")), Sexpr::mkAtom(Atom::mkSym("test")));
+        // 	std::cout << sexpr;
+        // }
 
-	win.display();
-    }
+        RenderWindow win(getBestVideoMode(), "SFML Works", Style::Fullscreen);
 
-    return EXIT_SUCCESS;
+        while (win.isOpen())
+        {
+                Event e;
+
+                while (win.pollEvent(e))
+                {
+                        if (e.type == Event::Closed)
+                                win.close();
+                }
+
+                win.clear();
+
+                win.display();
+        }
+
+        return EXIT_SUCCESS;
 }
 
 VideoMode getBestVideoMode()
 {
-    auto fsModes = VideoMode::getFullscreenModes();
+        auto fsModes = VideoMode::getFullscreenModes();
 
-    if (fsModes.empty())
-	throw std::runtime_error("No fullscreen mode available");
+        if (fsModes.empty())
+                throw std::runtime_error("No fullscreen mode available");
 
-    auto mode = fsModes[0];
+        auto mode = fsModes[0];
 
-    if (!mode.isValid())
-	throw std::runtime_error("The fullscreen mode is not valid");
+        if (!mode.isValid())
+                throw std::runtime_error("The fullscreen mode is not valid");
 
-    return mode;
+        return mode;
 }
