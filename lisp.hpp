@@ -54,6 +54,7 @@ namespace lisp
                 Cell(ProcType proc, CellType type = Proc) : type{type}, proc{proc}, env{nullptr} {}
 
                 static Cell mkList(std::vector<Cell> const& xs) {return Cell{List, 0, "", xs, {}, nullptr};}
+                static Cell mkSym(std::string const& val) {return {Symbol, val};}
 
                 bool operator==(Cell const& c) const;
                 bool operator!=(Cell const& c) const {return !(*this == c);}

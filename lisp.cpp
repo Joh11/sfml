@@ -113,7 +113,7 @@ namespace lisp
 
                 for(auto c : s)
                 {
-                        if(utils::contains("()", c))
+                        if(utils::contains("()'`,", c))
                         {
                                 tokens.push_back(token);
                                 tokens.push_back({c});
@@ -166,6 +166,12 @@ namespace lisp
 
                         return c;
                 }
+                else if(token == "'")
+                        return Cell::mkList({Cell::mkSym("quote"), parseFrom(tokens)});
+                else if(token == "`")
+                        return Cell::mkList({Cell::mkSym("quasiquote"), parseFrom(tokens)});
+                else if(token == ",")
+                        return Cell::mkList({Cell::mkSym("unquote"), parseFrom(tokens)});
                 else
                 {
                         return parseAtom(token);
@@ -203,13 +209,14 @@ namespace lisp
                 _env["cdr"] = {{cdr}};
                 _env["eq?"] = {{eqQuestionMark}};
                 _env["atom?"] = {{atomQuestionMark}};
+                _env["error"] = {{error}};
 
                 _env["quote"] = {{quote}, SpeForm};
                 _env["cond"] = {SpeForm, "cond"};
                 _env["label"] = {SpeForm, "label"};
                 _env["lambda"] = {SpeForm, "lambda"};
-
-
+                _env["macro"] = {SpeForm, "macro"};
+                _env["set"] = {SpeForm, "set"};
         }
 
         Cell Interpreter::eval(Cell const& c)
@@ -285,14 +292,31 @@ namespace lisp
                                         {
                                                 return evalLabel(args, env);
                                         }
-                                        else if(f.val == "lambda")
+                                        else if(f.val == "lambda" || f.val == "macro")
                                         {
                                                 // The code is short enough we put it here
                                                 auto cpy{c};
-                                                cpy.type = Lambda;
+
+                                                // A macro is like a lambda except that the arguments are not evaluated before
+                                                cpy.type = f.val == "lambda" ? Lambda : Macro;
                                                 cpy.list[0] = f;
                                                 cpy.env = &env;
                                                 return cpy;
+                                        }
+                                        else if(f.val == "set")
+                                        {
+                                                // Syntax : (set varName value)
+                                                if(args.size() != 2)
+                                                        throw std::runtime_error{"A set take two arguments exactly"};
+                                                if(args[0].type != Symbol)
+                                                        throw std::runtime_error{"First arg of set should be a symbol"};
+
+                                                // Evaluate the second argument
+                                                auto val = eval(args[1], env);
+
+                                                // Modify the main environment ! not the current one !
+                                                _env[args[0].val] = val;
+                                                return val;
                                         }
                                 }
 

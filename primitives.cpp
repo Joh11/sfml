@@ -54,6 +54,7 @@ Cell quote(std::vector<Cell> const& xs)
         return xs[0];
 }
 
-// Cell cond(std::vector<Cell> const& xs);
-// Cell lambda(std::vector<Cell> const& xs);
-// Cell label(std::vector<Cell> const& xs);
+Cell error(std::vector<Cell> const& xs)
+{
+        throw std::runtime_error{xs[0].val};
+}
